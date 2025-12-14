@@ -1,112 +1,263 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import { useEffect, useState } from 'react';
+import { StyleSheet, ScrollView, Text, View, TouchableOpacity, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { getHistory, getFavorites, type HistoryItem, type FavoriteItem } from '@/utils/storage';
 
-export default function TabTwoScreen() {
+export default function ExploreScreen() {
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const router = useRouter();
+
+  const loadData = async () => {
+    const [hist, favs] = await Promise.all([getHistory(), getFavorites()]);
+    setHistory(hist);
+    setFavorites(favs);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  const getLevelColor = (level: "Grønn" | "Gul" | "Rød") => {
+    return level === "Rød" ? "#ff4444" : level === "Gul" ? "#ffaa00" : "#44ff44";
+  };
+
+  const getLevelText = (level: "Grønn" | "Gul" | "Rød") => {
+    return level === "Rød" ? "Sannsynlig ultraprosessert" :
+           level === "Gul" ? "Mulig ultraprosessert" :
+           "Lite sannsynlig ultraprosessert";
+  };
+
+  const navigateToProduct = (barcode: string) => {
+    // Navigate to scanner with barcode pre-filled
+    router.push({
+      pathname: '/(tabs)/index',
+      params: { barcode },
+    });
+  };
+
+  const renderProductRow = (item: HistoryItem | FavoriteItem, isHistory: boolean) => {
+    const levelColor = getLevelColor(item.upfLevel);
+    const levelText = getLevelText(item.upfLevel);
+
+    return (
+      <TouchableOpacity
+        key={item.barcode}
+        style={[
+          styles.productRow,
+          { backgroundColor: isDark ? "#1a1a1a" : "#f5f5f5" }
+        ]}
+        onPress={() => navigateToProduct(item.barcode)}
+      >
+        <View style={styles.productRowContent}>
+          <View style={styles.productRowLeft}>
+            <Text
+              style={[styles.productRowName, { color: isDark ? "#fff" : "#000" }]}
+              numberOfLines={2}
+            >
+              {item.product_name}
+            </Text>
+            {item.brands && (
+              <Text style={[styles.productRowBrand, { color: isDark ? "#ccc" : "#666" }]}>
+                {item.brands}
+              </Text>
+            )}
+            {isHistory && 'scannedAt' in item && (
+              <Text style={[styles.productRowDate, { color: isDark ? "#888" : "#999" }]}>
+                {new Date(item.scannedAt).toLocaleDateString('no-NO', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
+            )}
+          </View>
+          <View style={styles.productRowRight}>
+            <View
+              style={[
+                styles.levelBadge,
+                { backgroundColor: levelColor }
+              ]}
+            >
+              <Text style={styles.levelBadgeText}>{item.score}/100</Text>
+            </View>
+            <Text style={[styles.levelText, { color: isDark ? "#ccc" : "#666" }]}>
+              {levelText}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
+    <ScrollView
+      style={[styles.container, { backgroundColor: isDark ? "#000" : "#fff" }]}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
+        <ThemedText type="title">Historikk</ThemedText>
       </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+
+      {/* Allergies button */}
+      <TouchableOpacity
+        style={[
+          styles.allergiesButton,
+          { backgroundColor: isDark ? "#1a1a1a" : "#f5f5f5" }
+        ]}
+        onPress={() => router.push('/(tabs)/allergies')}
+      >
+        <Text style={[styles.allergiesButtonText, { color: isDark ? "#fff" : "#000" }]}>
+          Allergier
+        </Text>
+        <Text style={[styles.allergiesButtonArrow, { color: isDark ? "#888" : "#666" }]}>
+          →
+        </Text>
+      </TouchableOpacity>
+
+      {/* Beta/Diagnose button */}
+      <TouchableOpacity
+        style={[
+          styles.allergiesButton,
+          { backgroundColor: isDark ? "#1a1a1a" : "#f5f5f5" }
+        ]}
+        onPress={() => router.push('/(tabs)/beta')}
+      >
+        <Text style={[styles.allergiesButtonText, { color: isDark ? "#fff" : "#000" }]}>
+          Beta / Diagnose
+        </Text>
+        <Text style={[styles.allergiesButtonArrow, { color: isDark ? "#888" : "#666" }]}>
+          →
+        </Text>
+      </TouchableOpacity>
+
+      {/* Favorites Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: isDark ? "#fff" : "#000" }]}>
+          Favoritter
+        </Text>
+        {favorites.length === 0 ? (
+          <Text style={[styles.emptyText, { color: isDark ? "#888" : "#666" }]}>
+            Ingen favoritter ennå
+          </Text>
+        ) : (
+          favorites.map((item) => renderProductRow(item, false))
+        )}
+      </View>
+
+      {/* History Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: isDark ? "#fff" : "#000" }]}>
+          Sist scannet
+        </Text>
+        {history.length === 0 ? (
+          <Text style={[styles.emptyText, { color: isDark ? "#888" : "#666" }]}>
+            Ingen scannet historikk ennå
+          </Text>
+        ) : (
+          history.map((item) => renderProductRow(item, true))
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
   },
   titleContainer: {
+    marginBottom: 24,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    paddingVertical: 16,
+  },
+  productRow: {
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  productRowContent: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  productRowLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  productRowName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  productRowBrand: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  productRowDate: {
+    fontSize: 12,
+  },
+  productRowRight: {
+    alignItems: 'flex-end',
+  },
+  levelBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  levelBadgeText: {
+    color: '#000',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  levelText: {
+    fontSize: 11,
+    textAlign: 'right',
+  },
+  allergiesButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 24,
+  },
+  allergiesButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  allergiesButtonArrow: {
+    fontSize: 18,
   },
 });
