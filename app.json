@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tollefz.upfscannerapp",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Denne appen trenger kamera for å skanne strekkoder"
       }
     },
     "android": {
@@ -25,10 +26,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ],
       "package": "com.tollefz.upfscannerapp"
     },
@@ -55,8 +53,7 @@
         {
           "cameraPermission": "Appen trenger tilgang til kamera for å scanne strekkoder."
         }
-      ],
-      "expo-barcode-scanner"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
